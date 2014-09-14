@@ -23,8 +23,8 @@ publishing {
             artifact tasks.sourceJar {
                 classifier = 'sources'
             }
-            groupId 'ethanjones'
-            artifactId 'data'
+            groupId 'ethanjones.data'
+            artifactId 'java'
             version this.version
         }
     }
