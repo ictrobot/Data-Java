@@ -1,0 +1,36 @@
+apply plugin: 'java'
+apply plugin: "maven-publish"
+
+sourceSets.main.java.srcDirs = ["src/"]
+version = '1.0'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+
+}
+
+task sourceJar(type: Jar, dependsOn: classes) {
+    from sourceSets.main.allSource
+}
+
+publishing {
+    publications {
+        jar(MavenPublication) {
+            artifact tasks.jar
+            artifact tasks.sourceJar {
+                classifier = 'sources'
+            }
+            groupId 'ethanjones'
+            artifactId 'data'
+            version this.version
+        }
+    }
+    repositories {
+        maven {
+            url "repo"
+        }
+    }
+}
