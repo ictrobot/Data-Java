@@ -102,7 +102,7 @@ public class DataList<T extends Data> extends Data implements List<T> {
 
   @Override
   public ListIterator<T> listIterator(int index) {
-    return list.listIterator();
+    return list.listIterator(index);
   }
 
   @Override
