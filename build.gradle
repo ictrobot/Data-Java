@@ -4,6 +4,17 @@ apply plugin: "maven-publish"
 sourceSets.main.java.srcDirs = ["src/"]
 version = '1.0'
 
+ext {
+    isRelease = true
+    localProperties = new Properties()
+    if (file("build.properties").exists()) {
+        file("build.properties").withReader { reader ->
+            localProperties.load(reader)
+        }
+    }
+    if (localProperties.DATA_MAVEN_REPO == null) localProperties.DATA_MAVEN_REPO = getProjectDir().absolutePath + "/repo"
+}
+
 repositories {
     mavenCentral()
 }
@@ -25,12 +36,30 @@ publishing {
             }
             groupId 'ethanjones'
             artifactId 'data'
-            version this.version
+            version getMavenVersionString()
         }
     }
     repositories {
         maven {
-            url "repo"
+            url getMavenRepo()
         }
     }
+}
+
+def String getMavenVersionString() {
+    def str = version;
+    if (!isRelease) {
+        str = str + "-SNAPSHOT"
+    }
+    return str
+}
+
+def String getMavenRepo() {
+    def str = localProperties.DATA_MAVEN_REPO + "/"
+    if (isRelease) {
+        str = str + "releases"
+    } else {
+        str = str + "snapshots"
+    }
+    return str
 }
