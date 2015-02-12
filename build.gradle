@@ -7,14 +7,16 @@ sourceSets.main.java.srcDirs = ["src/"]
 version = '1.1'
 
 ext {
-    isRelease = false
+    isRelease = true
     localProperties = new Properties()
     if (file("build.properties").exists()) {
         file("build.properties").withReader { reader ->
             localProperties.load(reader)
         }
     }
-    if (localProperties.DATA_MAVEN_REPO == null) localProperties.DATA_MAVEN_REPO = getProjectDir().absolutePath + "/repo"
+    if (localProperties.MAVEN_REPO_PATH == null) localProperties.MAVEN_REPO_PATH = getRootProject().getProjectDir().absolutePath + "/repo/"
+    if (localProperties.MAVEN_REPO_USERNAME == null) localProperties.MAVEN_REPO_USERNAME = ""
+    if (localProperties.MAVEN_REPO_PASSWORD == null) localProperties.MAVEN_REPO_PASSWORD = ""
 }
 
 repositories {
@@ -44,6 +46,10 @@ publishing {
     repositories {
         maven {
             url getMavenRepo()
+            credentials {
+                username localProperties.MAVEN_REPO_USERNAME
+                password localProperties.MAVEN_REPO_PASSWORD
+            }
         }
     }
 }
@@ -57,7 +63,7 @@ def String getMavenVersionString() {
 }
 
 def String getMavenRepo() {
-    def str = localProperties.DATA_MAVEN_REPO + "/"
+    def str = localProperties.MAVEN_REPO_PATH + "/"
     if (isRelease) {
         str = str + "releases"
     } else {
