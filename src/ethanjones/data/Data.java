@@ -1,23 +1,48 @@
 package ethanjones.data;
 
-import java.io.DataInput;
-import java.io.DataOutput;
-import java.io.IOException;
+import java.io.*;
 
-public abstract class Data {
+public final class Data {
 
-  protected abstract void write(DataOutput output) throws IOException;
+  public static Object input(DataInput input) throws IOException {
+    return DataInterpreter.get(input.readByte()).input(input);
+  }
 
-  protected abstract void read(DataInput input) throws IOException;
+  public static void output(Object obj, DataOutput output) throws IOException {
+    DataInterpreter interpreter = DataInterpreter.get(obj.getClass());
+    output.write(interpreter.id());
+    interpreter.output(obj, output);
+  }
 
-  public abstract byte getId();
+  // Byte Array
+  public static Object input(byte[] bytes) throws IOException {
+    return input(new DataInputStream(new ByteArrayInputStream(bytes)));
+  }
 
-  @Override
-  public abstract boolean equals(Object o);
+  public static byte[] output(Object obj) throws IOException {
+    ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+    output(obj, new DataOutputStream(byteArrayOutputStream));
+    return byteArrayOutputStream.toByteArray();
+  }
 
-  @Override
-  public abstract String toString();
+  // File
+  public static void write(Object obj, File file) throws IOException {
+    FileOutputStream fileOutputStream = new FileOutputStream(file);
 
-  @Override
-  public abstract int hashCode();
+    try {
+      output(obj, new DataOutputStream(fileOutputStream));
+    } finally {
+      fileOutputStream.close();
+    }
+  }
+
+  public static Object read(File file) throws IOException {
+    FileInputStream fileInputStream = new FileInputStream(file);
+
+    try {
+      return input(new DataInputStream(fileInputStream));
+    } finally {
+      fileInputStream.close();
+    }
+  }
 }
