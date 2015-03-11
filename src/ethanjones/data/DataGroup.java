@@ -1,5 +1,6 @@
 package ethanjones.data;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -46,12 +47,6 @@ public class DataGroup {
     return map.get(key);
   }
 
-  public ArrayList getList(String key) {
-    Object obj = get(key);
-    if (obj instanceof ArrayList) return (ArrayList) obj;
-    return (ArrayList) put(key, new ArrayList());
-  }
-
   public HashMap getHashMap(String key) {
     Object obj = get(key);
     if (obj instanceof HashMap) return (HashMap) obj;
@@ -62,6 +57,30 @@ public class DataGroup {
     Object obj = get(key);
     if (obj instanceof DataGroup) return (DataGroup) obj;
     return (DataGroup) put(key, new DataGroup());
+  }
+
+  public ArrayList getList(String key) {
+    Object obj = get(key);
+    if (obj instanceof ArrayList) return (ArrayList) obj;
+    return (ArrayList) put(key, new ArrayList());
+  }
+
+  public Object[] getArray(String key) {
+    Object obj = get(key);
+    if (obj != null && obj.getClass().isArray()) return (Object[]) obj;
+    return new Object[0];
+  }
+
+  public <T> T[] getArray(String key, Class<T> tClass) {
+    Object obj = get(key);
+    if (obj != null && obj.getClass().isArray()) {
+      Class root = obj.getClass();
+      while (root.isArray()) {
+        root = root.getComponentType();
+      }
+      if (root == tClass) return (T[]) obj;
+    }
+    return (T[]) Array.newInstance(tClass, 0);
   }
 
   public Boolean getBoolean(String key) {

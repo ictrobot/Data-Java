@@ -3,6 +3,7 @@ package ethanjones.data;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -48,10 +49,10 @@ public abstract class DataInterpreter<T> {
   }
 
   static {
-    register(new ArrayListInterpreter(), ArrayList.class);
-    registerArray(new ArrayInterpreter());
     register(new HashMapInterpreter(), HashMap.class);
     register(new DataGroupInterpreter(), DataGroup.class);
+    register(new ArrayListInterpreter(), ArrayList.class);
+    registerArray(new ArrayInterpreter());
     register(new EndInterpreter(), End.class);
     register(new BooleanInterpreter(), Boolean.class);
     register(new ByteInterpreter(), Byte.class);
@@ -61,6 +62,70 @@ public abstract class DataInterpreter<T> {
     register(new LongInterpreter(), Long.class);
     register(new DoubleInterpreter(), Double.class);
     register(new StringInterpreter(), String.class);
+  }
+
+  private static class HashMapInterpreter extends DataInterpreter<HashMap> {
+
+    @Override
+    protected void output(HashMap obj, DataOutput output) throws IOException {
+      for (Entry<Object, Object> entry : ((HashMap<Object, Object>) obj).entrySet()) {
+        Data.output(entry.getValue(), output);
+        Data.output(entry.getKey(), output);
+      }
+      output.write(0);
+    }
+
+    @Override
+    protected HashMap input(DataInput input) throws IOException {
+      HashMap hashMap = new HashMap();
+      Object obj;
+      while (!((obj = Data.input(input)) instanceof End)) {
+        hashMap.put(Data.input(input), obj);
+      }
+      return hashMap;
+    }
+
+    @Override
+    protected Class<HashMap> tClass() {
+      return HashMap.class;
+    }
+
+    @Override
+    public byte id() {
+      return -4;
+    }
+  }
+
+  private static class DataGroupInterpreter extends DataInterpreter<DataGroup> {
+
+    @Override
+    protected void output(DataGroup obj, DataOutput output) throws IOException {
+      for (Entry<String, Object> entry : obj.map.entrySet()) {
+        Data.output(entry.getValue(), output);
+        output.writeUTF(entry.getKey());
+      }
+      output.write(0);
+    }
+
+    @Override
+    protected DataGroup input(DataInput input) throws IOException {
+      DataGroup dataGroup = new DataGroup();
+      Object obj;
+      while (!((obj = Data.input(input)) instanceof End)) {
+        dataGroup.map.put(input.readUTF(), obj);
+      }
+      return dataGroup;
+    }
+
+    @Override
+    protected Class<DataGroup> tClass() {
+      return DataGroup.class;
+    }
+
+    @Override
+    public byte id() {
+      return -3;
+    }
   }
 
   /**
@@ -96,63 +161,8 @@ public abstract class DataInterpreter<T> {
     }
 
     @Override
-    public byte id() {
-      return -4;
-    }
-  }
-
-  private static class ArrayInterpreter extends DataInterpreter {
-
-    @Override
-    protected void output(Object obj, DataOutput output) throws IOException {
-      DataInterpreter interpreter = get(obj.getClass().getComponentType());
-      Object[] array = (Object[]) obj;
-
-      output.writeInt(array.length);
-      output.writeByte(interpreter.id());
-
-      for (Object o : array) {
-        interpreter.output(o, output);
-      }
-    }
-
-    @Override
-    protected Object input(DataInput input) throws IOException {
-      int length = input.readInt();
-      DataInterpreter interpreter = get(input.readByte());
-      Object[] array = new Object[length];
-
-      for (int i = 0; i < length; i++) {
-        array[i] = interpreter.input(input);
-      }
-      return array;
-    }
-
-    @Override
-    public byte id() {
-      return -3;
-    }
-  }
-
-  private static class HashMapInterpreter extends DataInterpreter<HashMap> {
-
-    @Override
-    protected void output(HashMap obj, DataOutput output) throws IOException {
-      for (Entry<Object, Object> entry : ((HashMap<Object, Object>) obj).entrySet()) {
-        Data.output(entry.getValue(), output);
-        Data.output(entry.getKey(), output);
-      }
-      output.write(0);
-    }
-
-    @Override
-    protected HashMap input(DataInput input) throws IOException {
-      HashMap hashMap = new HashMap();
-      Object obj;
-      while (!((obj = Data.input(input)) instanceof End)) {
-        hashMap.put(Data.input(input), obj);
-      }
-      return hashMap;
+    protected Class<ArrayList> tClass() {
+      return ArrayList.class;
     }
 
     @Override
@@ -161,25 +171,77 @@ public abstract class DataInterpreter<T> {
     }
   }
 
-  private static class DataGroupInterpreter extends DataInterpreter<DataGroup> {
+  private static class ArrayInterpreter extends DataInterpreter {
 
     @Override
-    protected void output(DataGroup obj, DataOutput output) throws IOException {
-      for (Entry<String, Object> entry : obj.map.entrySet()) {
-        Data.output(entry.getValue(), output);
-        output.writeUTF(entry.getKey());
+    protected void output(Object obj, DataOutput output) throws IOException {
+      Class root = obj.getClass();
+      while (root.isArray()) {
+        root = root.getComponentType();
       }
-      output.write(0);
+
+      DataInterpreter interpreter = get(root);
+      output.writeByte(interpreter.id());
+      output(obj, output, interpreter);
+    }
+
+    private void output(Object obj, DataOutput output, DataInterpreter interpreter) throws IOException{
+      if (obj.getClass().isArray()) {
+        Object[] array = (Object[]) obj;
+        if (obj.getClass().getComponentType().isArray()) {
+          output.writeInt(array.length);
+        } else {
+          output.writeInt(-array.length);
+        }
+        for (Object o : array) {
+          output(o, output, interpreter);
+        }
+      } else {
+        interpreter.output(obj, output);
+      }
+    }
+
+
+
+    @Override
+    protected Object input(DataInput input) throws IOException {
+      DataInterpreter interpreter = get(input.readByte());
+      return input(input, interpreter);
+    }
+
+    private Object input(DataInput input, DataInterpreter interpreter) throws IOException {
+      int length = input.readInt();
+      if (length <= 0) {
+        length = -length;
+        Object[] array = (Object[]) Array.newInstance(interpreter.tClass(), length);
+        for (int i = 0; i < length; i++) {
+          array[i] = interpreter.input(input);
+        }
+        return array;
+      } else {
+        Object first = input(input, interpreter);
+        Object[] array = (Object[]) Array.newInstance(first.getClass(), length);
+        array[0] = first;
+        for (int i = 1; i < length; i++) {
+          array[i] = input(input, interpreter);
+        }
+        return array;
+      }
+    }
+
+    private int countDim(Object obj) {
+      Class root = obj.getClass();
+      int dim = 0;
+      while (root.isArray()) {
+        root = root.getComponentType();
+        dim++;
+      }
+      return dim;
     }
 
     @Override
-    protected DataGroup input(DataInput input) throws IOException {
-      DataGroup dataGroup = new DataGroup();
-      Object obj;
-      while (!((obj = Data.input(input)) instanceof End)) {
-        dataGroup.map.put(input.readUTF(), obj);
-      }
-      return dataGroup;
+    protected Class tClass() {
+      throw new UnsupportedOperationException();
     }
 
     @Override
@@ -203,6 +265,11 @@ public abstract class DataInterpreter<T> {
     }
 
     @Override
+    protected Class<End> tClass() {
+      return End.class;
+    }
+
+    @Override
     public byte id() {
       return 0;
     }
@@ -218,6 +285,11 @@ public abstract class DataInterpreter<T> {
     @Override
     protected Boolean input(DataInput input) throws IOException {
       return input.readBoolean();
+    }
+
+    @Override
+    protected Class<Boolean> tClass() {
+      return Boolean.class;
     }
 
     @Override
@@ -239,6 +311,11 @@ public abstract class DataInterpreter<T> {
     }
 
     @Override
+    protected Class<Byte> tClass() {
+      return Byte.class;
+    }
+
+    @Override
     public byte id() {
       return 2;
     }
@@ -254,6 +331,11 @@ public abstract class DataInterpreter<T> {
     @Override
     protected Short input(DataInput input) throws IOException {
       return input.readShort();
+    }
+
+    @Override
+    protected Class<Short> tClass() {
+      return Short.class;
     }
 
     @Override
@@ -275,6 +357,11 @@ public abstract class DataInterpreter<T> {
     }
 
     @Override
+    protected Class<Integer> tClass() {
+      return Integer.class;
+    }
+
+    @Override
     public byte id() {
       return 4;
     }
@@ -290,6 +377,11 @@ public abstract class DataInterpreter<T> {
     @Override
     protected Float input(DataInput input) throws IOException {
       return input.readFloat();
+    }
+
+    @Override
+    protected Class<Float> tClass() {
+      return Float.class;
     }
 
     @Override
@@ -311,6 +403,11 @@ public abstract class DataInterpreter<T> {
     }
 
     @Override
+    protected Class<Long> tClass() {
+      return Long.class;
+    }
+
+    @Override
     public byte id() {
       return 6;
     }
@@ -329,6 +426,11 @@ public abstract class DataInterpreter<T> {
     }
 
     @Override
+    protected Class<Double> tClass() {
+      return Double.class;
+    }
+
+    @Override
     public byte id() {
       return 7;
     }
@@ -344,6 +446,11 @@ public abstract class DataInterpreter<T> {
     @Override
     protected String input(DataInput input) throws IOException {
       return input.readUTF();
+    }
+
+    @Override
+    protected Class<String> tClass() {
+      return String.class;
     }
 
     @Override
@@ -372,6 +479,8 @@ public abstract class DataInterpreter<T> {
   protected abstract void output(T obj, DataOutput output) throws IOException;
 
   protected abstract T input(DataInput input) throws IOException;
+
+  protected abstract Class<T> tClass();
 
   public abstract byte id();
 }
