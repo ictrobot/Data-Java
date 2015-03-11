@@ -26,23 +26,23 @@ public final class Data {
   }
 
   // File
-  public static void write(Object obj, File file) throws IOException {
-    FileOutputStream fileOutputStream = new FileOutputStream(file);
-
-    try {
-      output(obj, new DataOutputStream(fileOutputStream));
-    } finally {
-      fileOutputStream.close();
-    }
-  }
-
-  public static Object read(File file) throws IOException {
+  public static Object input(File file) throws IOException {
     FileInputStream fileInputStream = new FileInputStream(file);
 
     try {
       return input(new DataInputStream(fileInputStream));
     } finally {
       fileInputStream.close();
+    }
+  }
+
+  public static void output(Object obj, File file) throws IOException {
+    FileOutputStream fileOutputStream = new FileOutputStream(file);
+
+    try {
+      output(obj, new DataOutputStream(fileOutputStream));
+    } finally {
+      fileOutputStream.close();
     }
   }
 }
