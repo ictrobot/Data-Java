@@ -12,13 +12,20 @@ public abstract class DataInterpreter<T> {
 
   protected static Map<Class, DataInterpreter> classInterpreterMap = new HashMap<Class, DataInterpreter>();
   protected static Map<Byte, DataInterpreter> byteInterpreterMap = new HashMap<Byte, DataInterpreter>();
+  protected static DataInterpreter arrayInterpreter;
 
   protected static <T> void register(DataInterpreter<T> interpreter, Class<T> tClass) {
     classInterpreterMap.put(tClass, interpreter);
     byteInterpreterMap.put(interpreter.id(), interpreter);
   }
 
+  protected static void registerArray(DataInterpreter interpreter) {
+    arrayInterpreter = interpreter;
+    byteInterpreterMap.put(interpreter.id(), interpreter);
+  }
+
   public static <T> DataInterpreter<T> get(Class<T> tClass) {
+    if (tClass.isArray()) return arrayInterpreter;
     DataInterpreter<T> interpreter = null;
     Class c = tClass;
     while (c != Object.class) {
@@ -41,9 +48,10 @@ public abstract class DataInterpreter<T> {
   }
 
   static {
-    register(new DataGroupInterpreter(), DataGroup.class);
     register(new ArrayListInterpreter(), ArrayList.class);
+    registerArray(new ArrayInterpreter());
     register(new HashMapInterpreter(), HashMap.class);
+    register(new DataGroupInterpreter(), DataGroup.class);
     register(new EndInterpreter(), End.class);
     register(new BooleanInterpreter(), Boolean.class);
     register(new ByteInterpreter(), Byte.class);
@@ -85,6 +93,39 @@ public abstract class DataInterpreter<T> {
         arrayList.add(interpreter.input(input));
       }
       return arrayList;
+    }
+
+    @Override
+    public byte id() {
+      return -4;
+    }
+  }
+
+  private static class ArrayInterpreter extends DataInterpreter {
+
+    @Override
+    protected void output(Object obj, DataOutput output) throws IOException {
+      DataInterpreter interpreter = get(obj.getClass().getComponentType());
+      Object[] array = (Object[]) obj;
+
+      output.writeInt(array.length);
+      output.writeByte(interpreter.id());
+
+      for (Object o : array) {
+        interpreter.output(o, output);
+      }
+    }
+
+    @Override
+    protected Object input(DataInput input) throws IOException {
+      int length = input.readInt();
+      DataInterpreter interpreter = get(input.readByte());
+      Object[] array = new Object[length];
+
+      for (int i = 0; i < length; i++) {
+        array[i] = interpreter.input(input);
+      }
+      return array;
     }
 
     @Override
