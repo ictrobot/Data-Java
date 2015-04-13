@@ -229,16 +229,6 @@ public abstract class DataInterpreter<T> {
       }
     }
 
-    private int countDim(Object obj) {
-      Class root = obj.getClass();
-      int dim = 0;
-      while (root.isArray()) {
-        root = root.getComponentType();
-        dim++;
-      }
-      return dim;
-    }
-
     @Override
     protected Class tClass() {
       throw new UnsupportedOperationException();
@@ -461,7 +451,7 @@ public abstract class DataInterpreter<T> {
 
   private static final class End {
 
-    private End() {};
+    private End() {}
 
   }
 
