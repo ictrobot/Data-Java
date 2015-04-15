@@ -32,7 +32,11 @@ public abstract class DataInterpreter<T> {
     while (c != Object.class) {
       interpreter = classInterpreterMap.get(c);
       if (interpreter != null) break;
-      c = c.getSuperclass();
+      try {
+        c = c.getSuperclass();
+      } catch (Exception e) {
+        throw new NoInterpreterException(tClass);
+      }
     }
     if (interpreter == null) {
       throw new NoInterpreterException(tClass);
