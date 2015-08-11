@@ -1,6 +1,8 @@
 package ethanjones.data;
 
 import java.io.*;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 public final class Data {
 
@@ -43,6 +45,34 @@ public final class Data {
       output(obj, new DataOutputStream(fileOutputStream));
     } finally {
       fileOutputStream.close();
+    }
+  }
+
+  public static Object inputCompressed(File file) throws IOException {
+    return inputCompressed(new FileInputStream(file));
+  }
+
+  public static void outputCompressed(Object obj, File file) throws IOException {
+    outputCompressed(obj, new FileOutputStream(file));
+  }
+
+  public static Object inputCompressed(InputStream inputStream) throws IOException {
+    GZIPInputStream gzipInputStream = new GZIPInputStream(inputStream);
+
+    try {
+      return input(new DataInputStream(gzipInputStream));
+    } finally {
+      gzipInputStream.close();
+    }
+  }
+
+  public static void outputCompressed(Object obj, OutputStream outputStream) throws IOException {
+    GZIPOutputStream gzipOutputStream = new GZIPOutputStream(outputStream);
+
+    try {
+      output(obj, new DataOutputStream(gzipOutputStream));
+    } finally {
+      gzipOutputStream.close();
     }
   }
 }

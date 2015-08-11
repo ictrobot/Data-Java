@@ -29,15 +29,30 @@ dependencies {
 
 task sourceJar(type: Jar, dependsOn: classes) {
     from sourceSets.main.allSource
+
+    classifier = 'sources'
+}
+
+task formatterJar(type: Jar, dependsOn: classes) {
+    from files(sourceSets.main.output.classesDir)
+
+    manifest {
+        attributes 'Main-Class': 'ethanjones.data.DataFormatter'
+    }
+
+    classifier = 'formatter'
+}
+
+task jars(dependsOn: ['jar', 'sourceJar', 'formatterJar']) {
+
 }
 
 publishing {
     publications {
         jar(MavenPublication) {
             artifact tasks.jar
-            artifact tasks.sourceJar {
-                classifier = 'sources'
-            }
+            artifact tasks.sourceJar
+            artifact tasks.formatterJar
             groupId 'ethanjones'
             artifactId 'data'
             version getMavenVersionString()

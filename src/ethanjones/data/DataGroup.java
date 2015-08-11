@@ -33,6 +33,10 @@ public class DataGroup {
     return map.entrySet();
   }
 
+  public void remove(String key) {
+    map.remove(key);
+  }
+
   //Contains
   public boolean containsKey(String key) {
     return map.containsKey(key);
