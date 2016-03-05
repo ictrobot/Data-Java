@@ -4,10 +4,10 @@ apply plugin: "maven-publish"
 sourceCompatibility = 1.7
 
 sourceSets.main.java.srcDirs = ["src/"]
-version = '2.1'
+version = '2.2'
 
 ext {
-    isRelease = true
+    isRelease = false
     localProperties = new Properties()
     if (file("build.properties").exists()) {
         file("build.properties").withReader { reader ->
