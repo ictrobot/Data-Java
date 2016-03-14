@@ -459,13 +459,13 @@ public abstract class DataInterpreter<T> {
 
   }
 
-  private static class NoInterpreterException extends RuntimeException {
+  public static class NoInterpreterException extends RuntimeException {
 
-    public NoInterpreterException(Class c) {
+    private NoInterpreterException(Class c) {
       super("No interpreter for " + c.toString());
     }
 
-    public NoInterpreterException(Byte b) {
+    private NoInterpreterException(Byte b) {
       super("No interpreter for " + b);
     }
   }
