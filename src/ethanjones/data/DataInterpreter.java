@@ -8,6 +8,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.UUID;
 
 public abstract class DataInterpreter<T> {
 
@@ -66,6 +67,7 @@ public abstract class DataInterpreter<T> {
     register(new LongInterpreter(), Long.class);
     register(new DoubleInterpreter(), Double.class);
     register(new StringInterpreter(), String.class);
+    register(new UUIDInterpreter(), UUID.class);
   }
 
   private static class HashMapInterpreter extends DataInterpreter<HashMap> {
@@ -450,6 +452,30 @@ public abstract class DataInterpreter<T> {
     @Override
     public byte id() {
       return 8;
+    }
+  }
+
+  private static class UUIDInterpreter extends DataInterpreter<UUID> {
+
+    @Override
+    protected void output(UUID obj, DataOutput output) throws IOException {
+      output.writeLong(obj.getMostSignificantBits());
+      output.writeLong(obj.getLeastSignificantBits());
+    }
+
+    @Override
+    protected UUID input(DataInput input) throws IOException {
+      return new UUID(input.readLong(), input.readLong());
+    }
+
+    @Override
+    protected Class<UUID> tClass() {
+      return UUID.class;
+    }
+
+    @Override
+    public byte id() {
+      return 9;
     }
   }
 
